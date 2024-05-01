@@ -4,7 +4,7 @@ what is change in this fork?
 First I want to let you know that the code written here is made using Chat GPT 3.5 (free model).
 
 > [!CAUTION]
-> It was tested by me and worked well as I expected, but please if you use it take a backup before using it!!!
+> **It was tested by me and worked well as I expected, but please if you use it take a backup before using it!!!**
 
 Different operating instructions, read carefully:
 
@@ -40,7 +40,6 @@ Using Ubuntu as an example:
 sudo apt-get install build-essential python-all-dev libexiv2-dev libboost-python-dev python3 python3-pip python3-venv
 python3 -m pip install -r requirements.txt
 ~~~
-
 
 * Install [Termux from the F-Droid App store](https://f-droid.org/en/packages/com.termux/)
 * Install the following packages within Termux in order to satisfy the dependencies for `pyexiv2`:
