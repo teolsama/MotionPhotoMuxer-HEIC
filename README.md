@@ -1,3 +1,24 @@
+what is change in this fork?
+============================
+
+First I want to let you know that the code written here is made using Chat GPT 3.5 (free model).
+
+### It was tested by me and worked well as I expected, but please if you use it take a backup before using it!!!
+
+Different operating instructions, read carefully:
+
+I had Google Takeout with a lot of HEIC and MOV/MP4 files, originally this script doesn't support HEIC so I made it support HEIC by converting it to jpeg and continuing.
+
+Please note, **if you use export from Google Takeout** like me, you must use [google-photos-migrate](https://github.com/garzj/google-photos-migrate)
+In order not to cause problems with the EXIF data in your photos
+
+I made this script more convenient to operate:
+
+* Now the user can specify one path that includes all the files (photos and video) and **there is no need for --video or --photo anymore.**
+* The script scans for files with the HEIC extension and converts them to jpeg while preserving the EXIF data, then the script looks for a match between the name of a jpeg or jpg file and a file with a mov or mp4 extension.
+* The user has the option that all files for which no mp4/mov match is found (ie all other files that are not live files) will be moved to the destination folder.
+* The script then performs the merge to create a jpg file with motion.
+
 MotionPhotoMuxer
 ================
 
@@ -19,7 +40,6 @@ sudo apt-get install build-essential python-all-dev libexiv2-dev libboost-python
 python3 -m pip install -r requirements.txt
 ~~~
 
-## Installing on a Pixel/Android Phone
 
 * Install [Termux from the F-Droid App store](https://f-droid.org/en/packages/com.termux/)
 * Install the following packages within Termux in order to satisfy the dependencies for `pyexiv2`:
@@ -38,36 +58,9 @@ This should leave you with a working copy of MotionPhotoMuxer directly on your P
 You may want to make sure Termux has the "Storage" permission granted from within the system settings, if
 you plan on writing the output files to the `/sdcard/` partition.
 
-
 # Usage
 
-~~~
-usage: MotionPhotoMuxer.py [-h] [--verbose] [--dir DIR] [--recurse] [--photo PHOTO] [--video VIDEO] [--output OUTPUT] [--copyall]
-
-Merges a photo and video into a Microvideo-formatted Google Motion Photo
-
-options:
-  -h, --help       show this help message and exit
-  --verbose        Show logging messages.
-  --dir DIR        Process a directory for photos/videos. Takes precedence over --photo/--video
-  --recurse        Recursively process a directory. Only applies if --dir is also provided
-  --photo PHOTO    Path to the JPEG photo to add.
-  --video VIDEO    Path to the MOV video to add.
-  --output OUTPUT  Path to where files should be written out to.
-  --copyall        Copy unpaired files to directory.
-~~~
-
-A JPEG photo and MOV or MP4 video must be provided. The code only does simple
-error checking to see if the file extensions are `.jpg|.jpeg` and `.mov|.mp4`
-respectively, so if the actual photo/video encoding is something funky, things
-may not work right.
-
-> **Note**
-> The output motion photo tends to work more reliably in my experience if the input video is H.264 rather than HEVC.
-
-This has been tested successfully on a couple photos taken on an iPhone 12 and
-uploaded to Google Photos through a Pixel XL, but there hasn't been any
-extensive testing done yet, so use at your own risk!
+Just run the MotionPhotoMuxer.py file and follow the instraction
 
 # Credit
 
