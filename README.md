@@ -3,14 +3,15 @@ what is change in this fork?
 
 First I want to let you know that the code written here is made using Chat GPT 3.5 (free model).
 
-### It was tested by me and worked well as I expected, but please if you use it take a backup before using it!!!
+> [!CAUTION]
+> It was tested by me and worked well as I expected, but please if you use it take a backup before using it!!!
 
 Different operating instructions, read carefully:
 
 I had Google Takeout with a lot of HEIC and MOV/MP4 files, originally this script doesn't support HEIC so I made it support HEIC by converting it to jpeg and continuing.
 
 Please note, **if you use export from Google Takeout** like me, you must use [google-photos-migrate](https://github.com/garzj/google-photos-migrate)
-In order not to cause problems with the EXIF data in your photos
+In order not to cause problems with the EXIF data in your photos, then after you do this came back to here.
 
 I made this script more convenient to operate:
 
