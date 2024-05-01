@@ -115,19 +115,22 @@ def process_directory(input_dir, output_dir, move_other_images):
 
     logging.info("Conversion complete.")
 
-    # Move other images to output directory if specified
+    # Move non-matching files to output directory
     if move_other_images:
         for file in os.listdir(input_dir):
             file_path = join(input_dir, file)
-            if file.lower().endswith(('.jpg', '.jpeg')) and not exists(join(output_dir, file)):
+            if not matching_video(file_path, input_dir):
                 shutil.move(file_path, output_dir)
+                logging.info("Moved {} to output directory.".format(file))
 
-    # Remove remaining files in input directory
-    for file in os.listdir(input_dir):
-        file_path = join(input_dir, file)
-        os.remove(file_path)
+        # Remove remaining files in input directory
+        for file in os.listdir(input_dir):
+            file_path = join(input_dir, file)
+            os.remove(file_path)
 
-    logging.info("Cleanup complete.")
+        logging.info("Cleanup complete.")
+    else:
+        logging.info("No other images moved to output directory. Cleanup skipped.")
 
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
