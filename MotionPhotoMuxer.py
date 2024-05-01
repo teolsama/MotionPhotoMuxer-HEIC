@@ -122,6 +122,11 @@ def process_directory(input_dir, output_dir, move_other_images):
             if file.lower().endswith(('.jpg', '.jpeg')) and not exists(join(output_dir, file)):
                 shutil.move(file_path, output_dir)
 
+    # Remove remaining files in input directory
+    for file in os.listdir(input_dir):
+        file_path = join(input_dir, file)
+        os.remove(file_path)
+
     logging.info("Cleanup complete.")
 
 def main():
