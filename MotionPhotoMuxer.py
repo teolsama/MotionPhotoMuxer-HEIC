@@ -8,11 +8,23 @@ from os.path import exists, basename, isdir, join, splitext
 from PIL import Image
 
 def validate_directory(dir):
+    if not dir:
+        logging.error("No directory path provided.")
+        return False
     if not exists(dir):
-        logging.error("Path doesn't exist: {}".format(dir))
+        logging.error("Directory does not exist: {}".format(dir))
         return False
     if not isdir(dir):
         logging.error("Path is not a directory: {}".format(dir))
+        return False
+    return True
+
+def validate_file(file_path):
+    if not file_path:
+        logging.error("No file path provided.")
+        return False
+    if not exists(file_path):
+        logging.error("File does not exist: {}".format(file_path))
         return False
     return True
 
@@ -36,11 +48,11 @@ def convert_heic_to_jpeg(heic_path):
 
 def validate_media(photo_path, video_path):
     """Checks if the provided paths are valid."""
-    if not exists(photo_path):
-        logging.error("Photo does not exist: {}".format(photo_path))
+    if not validate_file(photo_path):
+        logging.error("Invalid photo path.")
         return False
-    if not exists(video_path):
-        logging.error("Video does not exist: {}".format(video_path))
+    if not validate_file(video_path):
+        logging.error("Invalid video path.")
         return False
     if not photo_path.lower().endswith(('.jpg', '.jpeg')):
         logging.error("Photo isn't a JPEG: {}".format(photo_path))
@@ -100,6 +112,14 @@ def matching_video(photo_path, video_dir):
 
 def process_directory(input_dir, output_dir, move_other_images):
     logging.info("Processing files in: {}".format(input_dir))
+    
+    if not validate_directory(input_dir):
+        logging.error("Invalid input directory.")
+        sys.exit(1)
+    
+    if not validate_directory(output_dir):
+        logging.error("Invalid output directory.")
+        sys.exit(1)
        
     for file in os.listdir(input_dir):
         file_path = join(input_dir, file)
