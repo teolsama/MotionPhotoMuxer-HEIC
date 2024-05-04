@@ -7,6 +7,9 @@ import piexif
 from os.path import exists, basename, isdir, join, splitext
 from PIL import Image
 
+problematic_files = []
+
+
 def validate_directory(dir):
     if not dir:
         logging.error("No directory path provided.")
@@ -30,21 +33,26 @@ def validate_file(file_path):
 
 def convert_heic_to_jpeg(heic_path):
     logging.info("Converting HEIC file to JPEG: {}".format(heic_path))
-    im = Image.open(heic_path)
-    jpeg_path = splitext(heic_path)[0] + ".jpg"
-    im.convert("RGB").save(jpeg_path, "JPEG")
-    logging.info("HEIC file converted to JPEG: {}".format(jpeg_path))
-    
-    # Copy EXIF data from HEIC to JPEG
-    exif_dict = piexif.load(heic_path)
-    if exif_dict:
-        exif_bytes = piexif.dump(exif_dict)
-        piexif.insert(exif_bytes, jpeg_path)
-        logging.info("EXIF data copied from HEIC to JPEG.")
-    else:
-        logging.warning("No EXIF data found in HEIC file.")
-    
-    return jpeg_path
+    try:
+        im = Image.open(heic_path)
+        jpeg_path = splitext(heic_path)[0] + ".jpg"
+        im.convert("RGB").save(jpeg_path, "JPEG")
+        logging.info("HEIC file converted to JPEG: {}".format(jpeg_path))
+        
+        # Copy EXIF data from HEIC to JPEG
+        exif_dict = piexif.load(heic_path)
+        if exif_dict:
+            exif_bytes = piexif.dump(exif_dict)
+            piexif.insert(exif_bytes, jpeg_path)
+            logging.info("EXIF data copied from HEIC to JPEG.")
+        else:
+            logging.warning("No EXIF data found in HEIC file.")
+        
+        return jpeg_path
+    except Exception as e:
+        logging.warning("Error converting HEIC file: {}".format(heic_path))
+        problematic_files.append(heic_path)
+        return None
 
 def validate_media(photo_path, video_path):
     """Checks if the provided paths are valid."""
@@ -126,9 +134,10 @@ def process_directory(input_dir, output_dir, move_other_images):
             file_path = os.path.join(root, file)
             if file.lower().endswith('.heic'):
                 jpeg_path = convert_heic_to_jpeg(file_path)
-                video_path = matching_video(jpeg_path, input_dir)
-                if video_path:
-                    convert(jpeg_path, video_path, output_dir)
+                if jpeg_path:
+                    video_path = matching_video(jpeg_path, input_dir)
+                    if video_path:
+                        convert(jpeg_path, video_path, output_dir)
             elif file.lower().endswith(('.jpg', '.jpeg')):
                 video_path = matching_video(file_path, input_dir)
                 if video_path:
@@ -156,6 +165,9 @@ def process_directory(input_dir, output_dir, move_other_images):
         logging.info("No other images moved to output directory. Cleanup skipped.")
 
 
+        
+
+
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     logging.info("Welcome to the Apple Live Photos to Google Motion Photos converter.")
@@ -176,6 +188,20 @@ def main():
 
     # Perform the conversion
     process_directory(input_dir, output_dir, move_other_images)
+
+
+    # Output summary of problematic files
+    if problematic_files:
+        logging.warning("The following files encountered errors during conversion:")
+        for file_path in problematic_files:
+            logging.warning(file_path)
+
+        # Write summary to a file
+        with open("problematic_files.txt", "w") as f:
+            f.write("The following files encountered errors during conversion:\n")
+            for file_path in problematic_files:
+                f.write(file_path + "\n")
+
 
 if __name__ == '__main__':
     main()
