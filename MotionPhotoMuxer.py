@@ -121,36 +121,40 @@ def process_directory(input_dir, output_dir, move_other_images):
         logging.error("Invalid output directory.")
         sys.exit(1)
        
-    for file in os.listdir(input_dir):
-        file_path = join(input_dir, file)
-        if file.lower().endswith('.heic'):
-            jpeg_path = convert_heic_to_jpeg(file_path)
-            video_path = matching_video(jpeg_path, input_dir)
-            if video_path:
-                convert(jpeg_path, video_path, output_dir)
-        elif file.lower().endswith(('.jpg', '.jpeg')):
-            video_path = matching_video(file_path, input_dir)
-            if video_path:
-                convert(file_path, video_path, output_dir)
+    for root, dirs, files in os.walk(input_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if file.lower().endswith('.heic'):
+                jpeg_path = convert_heic_to_jpeg(file_path)
+                video_path = matching_video(jpeg_path, input_dir)
+                if video_path:
+                    convert(jpeg_path, video_path, output_dir)
+            elif file.lower().endswith(('.jpg', '.jpeg')):
+                video_path = matching_video(file_path, input_dir)
+                if video_path:
+                    convert(file_path, video_path, output_dir)
 
     logging.info("Conversion complete.")
 
     # Move non-matching files to output directory
     if move_other_images:
-        for file in os.listdir(input_dir):
-            file_path = join(input_dir, file)
-            if not matching_video(file_path, input_dir):
-                shutil.move(file_path, output_dir)
-                logging.info("Moved {} to output directory.".format(file))
+        for root, dirs, files in os.walk(input_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if not matching_video(file_path, input_dir):
+                    shutil.move(file_path, output_dir)
+                    logging.info("Moved {} to output directory.".format(file))
 
         # Remove remaining files in input directory
-        for file in os.listdir(input_dir):
-            file_path = join(input_dir, file)
-            os.remove(file_path)
+        for root, dirs, files in os.walk(input_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
 
         logging.info("Cleanup complete.")
     else:
         logging.info("No other images moved to output directory. Cleanup skipped.")
+
 
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
