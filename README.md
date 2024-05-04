@@ -15,10 +15,44 @@ In order not to cause problems with the EXIF data in your photos, then after you
 
 I made this script more convenient to operate:
 
-* Now the user can specify one path that includes all the files (photos and video) and **there is no need for --video or --photo anymore.**
-* The script scans for files with the HEIC extension and converts them to jpeg while preserving the EXIF data, then the script looks for a match between the name of a jpeg or jpg file and a file with a mov or mp4 extension.
-* The user has the option that all files for which no mp4/mov match is found (ie all other files that are not live files) will be moved to the destination folder.
-* The script then performs the merge to create a jpg file with motion.
+<details>
+  <summary>How its work?</summary>
+
+The script operates in several distinct steps:
+
+1. **Scanning and Conversion of HEIC Files:**
+   - It begins by scanning the specified directory for files with the HEIC extension.
+   - Each HEIC file found is converted to JPEG format while ensuring preservation of EXIF data.
+   - If successful, the script logs the conversion and copies EXIF data from the original HEIC to the newly created JPEG file.
+
+2. **Matching JPEG Files with Video Files:**
+   - For each converted JPEG file, the script attempts to find a matching video file (MOV or MP4) within the same directory.
+   - If a matching video file is found, the script proceeds to merge the JPEG and video files together.
+
+3. **Merging Files:**
+   - The script merges the JPEG and video files, creating a single file that combines both image and motion.
+   - It calculates the offset between the sizes of the original photo and the merged file, essential for later XMP metadata addition.
+
+4. **Adding XMP Metadata:**
+   - XMP metadata is added to the merged file, crucial for recognizing it as a Google Motion Photo.
+   - Existing metadata in the file is read and potentially affected XMP keys are logged as a warning.
+
+5. **Processing Directory:**
+   - The script iterates through all files in the specified directory, processing HEIC files first and then JPEG files.
+   - For each file, it checks for a matching video file and performs the conversion process if found.
+   - Optionally, non-matching files can be moved to the output directory.
+
+6. **User Interaction:**
+   - The user is prompted to provide input and output directories.
+   - Additionally, the user can choose whether to move non-matching images to the output directory.
+
+7. **Error Handling and Logging:**
+   - The script logs various messages throughout its execution, including errors encountered during file processing.
+   - Problematic files are recorded and logged for the user's reference.
+
+By following these steps, the script efficiently converts Apple Live Photos into Google Motion Photos, ensuring a seamless user experience while handling various file formats and preserving essential metadata.
+
+</details>
 
 MotionPhotoMuxer
 ================
