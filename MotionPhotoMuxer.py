@@ -188,6 +188,29 @@ def process_directory(input_dir, output_dir, move_other_images):
     else:
         logging.info("No other images moved to output directory. Cleanup skipped.")
 
+def convert_with_matching_videos(input_dir, output_dir):
+    logging.info("Converting HEIC files with matching videos only.")
+    for root, dirs, files in os.walk(input_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if file.lower().endswith('.heic'):
+                jpeg_path = convert_heic_to_jpeg(file_path)
+                if jpeg_path:
+                    video_path = matching_video(jpeg_path, input_dir)
+                    if video_path:
+                        convert(jpeg_path, video_path, output_dir)
+
+
+def convert_all_heic_files(input_dir, output_dir):
+    logging.info("Converting all HEIC files to JPEG.")
+    for root, dirs, files in os.walk(input_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if file.lower().endswith('.heic'):
+                convert_heic_to_jpeg(file_path)
+
+
+
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     logging.info("Welcome to the Apple Live Photos to Google Motion Photos converter.")
@@ -202,12 +225,28 @@ def main():
     # Prompt for output directory
     output_dir = input("Enter the output directory path (default is 'output'): ").strip() or "output"
 
+    # Create the output directory if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        logging.info("Created output directory: {}".format(output_dir))
+
+    # Prompt for conversion mode
+    conversion_mode = input("Choose conversion mode:\n"
+                            "1. Convert all HEIC files to JPEG regardless of matching videos.\n"
+                            "2. Convert only HEIC files with matching MP4/MOV videos.\n"
+                            "Enter your choice (1 or 2): ").strip()
+
+    if conversion_mode == '1':
+        convert_all_heic_files(input_dir, output_dir)
+    elif conversion_mode == '2':
+        convert_with_matching_videos(input_dir, output_dir)
+    else:
+        logging.error("Invalid choice. Please enter 1 or 2.")
+        sys.exit(1)
+
     # Prompt for moving other images
     move_other_images_str = input("Move other images to output directory? (y/n, default is 'n'): ").strip().lower()
     move_other_images = move_other_images_str == 'y'
-
-    # Perform the conversion
-    process_directory(input_dir, output_dir, move_other_images)
 
     # Output summary of problematic files
     if problematic_files:
@@ -220,6 +259,7 @@ def main():
             f.write("The following files encountered errors during conversion:\n")
             for file_path in problematic_files:
                 f.write(file_path + "\n")
+
 
 if __name__ == '__main__':
     main()
