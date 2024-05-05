@@ -105,11 +105,16 @@ def convert(photo_path, video_path, output_path):
     if not validate_media(photo_path, video_path):
         logging.error("Invalid photo or video path.")
         sys.exit(1)
+    # Extracting truncated paths
+    truncated_photo_path = '/'.join(photo_path.split('/')[-3:])
+    truncated_video_path = '/'.join(video_path.split('/')[-3:])
     merged = merge_files(photo_path, video_path, output_path)
     photo_filesize = os.path.getsize(photo_path)
     merged_filesize = os.path.getsize(merged)
     offset = merged_filesize - photo_filesize
     add_xmp_metadata(merged, offset)
+    logging.info("Conversion complete for photo: {} and video: {}".format(truncated_photo_path, truncated_video_path))
+
 
 def matching_video(photo_path, video_dir):
     base = os.path.splitext(basename(photo_path))[0]
@@ -143,16 +148,18 @@ def process_directory(input_dir, output_dir, move_other_images):
                 if video_path:
                     convert(file_path, video_path, output_dir)
 
-    logging.info("Conversion complete.")
-
     # Move non-matching files to output directory
     if move_other_images:
         for root, dirs, files in os.walk(input_dir):
             for file in files:
                 file_path = os.path.join(root, file)
                 if not matching_video(file_path, input_dir):
-                    shutil.move(file_path, output_dir)
-                    logging.info("Moved {} to output directory.".format(file))
+                    try:
+                        shutil.move(file_path, output_dir)
+                        logging.info("Moved {} to output directory.".format(file))
+                    except shutil.Error as e:
+                        logging.warning("Error moving file: {}. Skipping move operation.".format(file_path))
+                        continue
 
         # Remove remaining files in input directory
         for root, dirs, files in os.walk(input_dir):
@@ -163,7 +170,6 @@ def process_directory(input_dir, output_dir, move_other_images):
         logging.info("Cleanup complete.")
     else:
         logging.info("No other images moved to output directory. Cleanup skipped.")
-
 
         
 
