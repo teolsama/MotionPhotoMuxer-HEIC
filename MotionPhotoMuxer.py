@@ -4,8 +4,10 @@ import shutil
 import sys
 import pyexiv2
 import piexif
+import concurrent.futures
 from os.path import exists, basename, isdir, join, splitext
 from PIL import Image
+from tqdm import tqdm  # Import tqdm for progress bar
 
 problematic_files = []
 
@@ -134,6 +136,7 @@ def process_directory(input_dir, output_dir, move_other_images):
         logging.error("Invalid output directory.")
         sys.exit(1)
        
+    photo_video_pairs = []
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             file_path = os.path.join(root, file)
@@ -142,11 +145,25 @@ def process_directory(input_dir, output_dir, move_other_images):
                 if jpeg_path:
                     video_path = matching_video(jpeg_path, input_dir)
                     if video_path:
-                        convert(jpeg_path, video_path, output_dir)
+                        photo_video_pairs.append((jpeg_path, video_path))
             elif file.lower().endswith(('.jpg', '.jpeg')):
                 video_path = matching_video(file_path, input_dir)
                 if video_path:
-                    convert(file_path, video_path, output_dir)
+                    photo_video_pairs.append((file_path, video_path))
+
+    # Parallelize the conversion process with progress bar
+    with tqdm(total=len(photo_video_pairs), desc="Converting files") as pbar:
+        def update_progress(future):
+            pbar.update(1)
+            try:
+                future.result()
+            except Exception as exc:
+                logging.error("Conversion process failed: {}".format(exc))
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(convert, photo_path, video_path, output_dir) for photo_path, video_path in photo_video_pairs]
+            for future in concurrent.futures.as_completed(futures):
+                update_progress(future)
 
     # Move non-matching files to output directory
     if move_other_images:
@@ -171,9 +188,6 @@ def process_directory(input_dir, output_dir, move_other_images):
     else:
         logging.info("No other images moved to output directory. Cleanup skipped.")
 
-        
-
-
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     logging.info("Welcome to the Apple Live Photos to Google Motion Photos converter.")
@@ -195,7 +209,6 @@ def main():
     # Perform the conversion
     process_directory(input_dir, output_dir, move_other_images)
 
-
     # Output summary of problematic files
     if problematic_files:
         logging.warning("The following files encountered errors during conversion:")
@@ -207,7 +220,6 @@ def main():
             f.write("The following files encountered errors during conversion:\n")
             for file_path in problematic_files:
                 f.write(file_path + "\n")
-
 
 if __name__ == '__main__':
     main()
