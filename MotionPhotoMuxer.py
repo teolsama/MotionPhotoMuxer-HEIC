@@ -9,7 +9,6 @@ from PIL import Image
 
 problematic_files = []
 
-
 def validate_directory(dir):
     if not dir:
         logging.error("No directory path provided.")
@@ -115,7 +114,6 @@ def convert(photo_path, video_path, output_path):
     add_xmp_metadata(merged, offset)
     logging.info("Conversion complete for photo: {} and video: {}".format(truncated_photo_path, truncated_video_path))
 
-
 def matching_video(photo_path, video_dir):
     base = os.path.splitext(basename(photo_path))[0]
     for file in os.listdir(video_dir):
@@ -123,7 +121,7 @@ def matching_video(photo_path, video_dir):
             return join(video_dir, file)
     return ""
 
-def process_directory(input_dir, output_dir, move_other_images):
+def process_directory(input_dir, output_dir, move_other_images, convert_all):
     logging.info("Processing files in: {}".format(input_dir))
     
     if not validate_directory(input_dir):
@@ -138,10 +136,10 @@ def process_directory(input_dir, output_dir, move_other_images):
         for file in files:
             file_path = os.path.join(root, file)
             if file.lower().endswith('.heic'):
-                jpeg_path = convert_heic_to_jpeg(file_path)
-                if jpeg_path:
-                    video_path = matching_video(jpeg_path, input_dir)
-                    if video_path:
+                video_path = matching_video(file_path, input_dir)
+                if convert_all or video_path:
+                    jpeg_path = convert_heic_to_jpeg(file_path)
+                    if jpeg_path and video_path:
                         convert(jpeg_path, video_path, output_dir)
             elif file.lower().endswith(('.jpg', '.jpeg')):
                 video_path = matching_video(file_path, input_dir)
@@ -171,8 +169,6 @@ def process_directory(input_dir, output_dir, move_other_images):
     else:
         logging.info("No other images moved to output directory. Cleanup skipped.")
 
-        
-
 
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -192,9 +188,12 @@ def main():
     move_other_images_str = input("Move other images to output directory? (y/n, default is 'n'): ").strip().lower()
     move_other_images = move_other_images_str == 'y'
 
-    # Perform the conversion
-    process_directory(input_dir, output_dir, move_other_images)
+    # Prompt for conversion options
+    convert_all_str = input("Convert all HEIC files to JPEG or only those with matching videos? (all/matching, default is 'matching'): ").strip().lower()
+    convert_all = convert_all_str == 'all' if convert_all_str else False
 
+    # Perform the conversion
+    process_directory(input_dir, output_dir, move_other_images, convert_all)
 
     # Output summary of problematic files
     if problematic_files:
