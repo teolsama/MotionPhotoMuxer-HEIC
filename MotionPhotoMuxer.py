@@ -157,9 +157,19 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
         for root, dirs, files in os.walk(input_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                if not matching_video(file_path, input_dir):
-                    shutil.move(file_path, other_files_dir)
-                    logging.info("Moved {} to output directory.".format(file))
+                if file.lower().endswith(('.heic', '.jpg', '.jpeg')):
+                    if not matching_video(file_path, input_dir):
+                        shutil.move(file_path, other_files_dir)
+                        logging.info("Moved {} to output directory.".format(file))
+                elif file.lower().endswith(('.mov', '.mp4')):
+                    photo_path = os.path.splitext(file_path)[0] + ".jpg"
+                    if not os.path.exists(photo_path):
+                        photo_path = os.path.splitext(file_path)[0] + ".jpeg"
+                    if not os.path.exists(photo_path):
+                        photo_path = os.path.splitext(file_path)[0] + ".HEIC"
+                    if not os.path.exists(photo_path):
+                        shutil.move(file_path, other_files_dir)
+                        logging.info("Moved {} to output directory.".format(file))
 
     logging.info("Cleanup complete.")
 
