@@ -118,7 +118,7 @@ def matching_video(photo_path, video_dir):
             return join(video_dir, file)
     return ""
 
-def process_directory(input_dir, output_dir, move_other_images):
+def process_directory(input_dir, output_dir, move_other_images, convert_all_heic):
     logging.info("Processing files in: {}".format(input_dir))
     
     if not validate_directory(input_dir):
@@ -129,21 +129,26 @@ def process_directory(input_dir, output_dir, move_other_images):
         logging.error("Invalid output directory.")
         sys.exit(1)
        
+    matching_pairs = 0
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             file_path = os.path.join(root, file)
             if file.lower().endswith('.heic'):
-                jpeg_path = convert_heic_to_jpeg(file_path)
-                if jpeg_path:
-                    video_path = matching_video(jpeg_path, input_dir)
-                    if video_path:
-                        convert(jpeg_path, video_path, output_dir)
+                if convert_all_heic or matching_video(file_path, input_dir):
+                    jpeg_path = convert_heic_to_jpeg(file_path)
+                    if jpeg_path:
+                        video_path = matching_video(jpeg_path, input_dir)
+                        if video_path:
+                            convert(jpeg_path, video_path, output_dir)
+                            matching_pairs += 1
             elif file.lower().endswith(('.jpg', '.jpeg')):
                 video_path = matching_video(file_path, input_dir)
                 if video_path:
                     convert(file_path, video_path, output_dir)
+                    matching_pairs += 1
 
     logging.info("Conversion complete.")
+    logging.info("Found {} matching HEIC/JPEG and MOV/MP4 pairs.".format(matching_pairs))
 
     # Move non-matching files to output directory
     if move_other_images:
@@ -158,16 +163,12 @@ def process_directory(input_dir, output_dir, move_other_images):
 
     logging.info("Cleanup complete.")
 
-
-        
-
-
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     logging.info("Welcome to the Apple Live Photos to Google Motion Photos converter.")
 
     # Prompt for directories
-    input_dir = input("Enter the directory path containing HEIC/JPEG/MOV/MP4 files: ").strip()
+    input_dir = input("Enter the directory path containing HEIC/JPEG/MOV/MP4 files in the same folder or subfolders: ").strip()
 
     if not validate_directory(input_dir):
         logging.error("Invalid directory path.")
@@ -177,15 +178,15 @@ def main():
     output_dir = input("Enter the output directory path (default is 'output'): ").strip() or "output"
 
     # Prompt for moving other images
-    move_other_images_str = input("Move other images to output directory? (y/n, default is 'n'): ").strip().lower()
+    move_other_images_str = input("Do you want to move non-matching files to the 'other_files' folder in the output directory? (y/n, default is 'n'): ").strip().lower()
     move_other_images = move_other_images_str == 'y'
 
     # Prompt for converting all HEIC files to JPEG
-    convert_all_heic_str = input("Convert all HEIC files to JPEG? (y/n, default is 'n'): ").strip().lower()
+    convert_all_heic_str = input("Do you want to convert all HEIC files to JPEG, regardless of whether they have a matching MOV/MP4 file? (y/n, default is 'n'): ").strip().lower()
     convert_all_heic = convert_all_heic_str == 'y'
 
     # Perform the conversion
-    process_directory(input_dir, output_dir, move_other_images)
+    process_directory(input_dir, output_dir, move_other_images, convert_all_heic)
 
     # Output summary of problematic files
     if problematic_files:
@@ -199,12 +200,14 @@ def main():
             for file_path in problematic_files:
                 f.write(file_path + "\n")
 
-    # Prompt for deleting original files
-    delete_original_str = input("Delete original HEIC and MOV/MP4 files? (y/n, default is 'n'): ").strip().lower()
+    # Prompt for deleting or saving original files
+    delete_original_str = input("Do you want to delete the original HEIC and MOV/MP4 files? If not, they will be saved. (y/n, default is 'n'): ").strip().lower()
     delete_original = delete_original_str == 'y'
 
     if delete_original:
         delete_original_files(input_dir)
+    else:
+        logging.info("Original HEIC and MOV/MP4 files will be saved.")
 
 def delete_original_files(input_dir):
     """Deletes original HEIC and MOV/MP4 files."""
@@ -216,7 +219,6 @@ def delete_original_files(input_dir):
                 os.remove(file_path)
                 logging.info("Deleted original file: {}".format(file_path))
     logging.info("Deletion complete.")
-
 
 if __name__ == '__main__':
     main()
