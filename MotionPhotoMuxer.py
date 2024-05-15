@@ -113,9 +113,10 @@ def convert(photo_path, video_path, output_path):
 
 def matching_video(photo_path, video_dir):
     base = os.path.splitext(basename(photo_path))[0]
-    for file in os.listdir(video_dir):
-        if file.startswith(base) and file.lower().endswith(('.mov', '.mp4')):
-            return join(video_dir, file)
+    for root, dirs, files in os.walk(video_dir):
+        for file in files:
+            if file.startswith(base) and file.lower().endswith(('.mov', '.mp4')):
+                return os.path.join(root, file)
     return ""
 
 def process_directory(input_dir, output_dir, move_other_images, convert_all_heic):
