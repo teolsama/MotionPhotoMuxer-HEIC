@@ -132,7 +132,7 @@ def unique_path(destination, filename):
         counter += 1
     return os.path.join(destination, new_filename)
 
-def process_directory(input_dir, output_dir, move_other_images, convert_all_heic):
+def process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted):
     logging.info("Processing files in: {}".format(input_dir))
     
     if not validate_directory(input_dir):
@@ -142,7 +142,7 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
     if not validate_directory(output_dir):
         logging.error("Invalid output directory.")
         sys.exit(1)
-       
+
     matching_pairs = 0
     for root, dirs, files in os.walk(input_dir):
         for file in files:
@@ -155,6 +155,12 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
                         if video_path:
                             convert(jpeg_path, video_path, output_dir)
                             matching_pairs += 1
+                if delete_converted and exists(file_path):
+                    try:
+                        os.remove(file_path)
+                        logging.info("Deleted converted HEIC file: {}".format(file_path))
+                    except Exception as e:
+                        logging.warning(f"Failed to delete file {file_path}: {str(e)}")
             elif file.lower().endswith(('.jpg', '.jpeg')):
                 video_path = matching_video(file_path, input_dir)
                 if video_path:
@@ -171,7 +177,7 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
         for root, dirs, files in os.walk(input_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                if file.lower().endswith(('.heic', '.jpg', '.jpeg', '.mov', '.mp4')):
+                if file.lower().endswith(('.heic', '.jpg', '.jpeg', '.mov', '.mp4', '.png', '.gif')):
                     if not matching_video(file_path, input_dir):
                         unique_file_path = unique_path(other_files_dir, basename(file_path))
                         shutil.move(file_path, unique_file_path)
@@ -213,8 +219,12 @@ def main():
     convert_all_heic_str = input("Do you want to convert all HEIC files to JPEG, regardless of whether they have a matching MOV/MP4 file? (y/n, default is 'n'): ").strip().lower()
     convert_all_heic = convert_all_heic_str == 'y'
 
+    # Prompt for deleting converted files
+    delete_converted_str = input("Do you want to delete converted HEIC files whether they have a matching MOV/MP4 file or not? (y/n, default is 'n'): ").strip().lower()
+    delete_converted = delete_converted_str == 'y'
+
     # Perform the conversion
-    process_directory(input_dir, output_dir, move_other_images, convert_all_heic)
+    process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted)
 
     # Output summary of problematic files
     if problematic_files:
@@ -228,7 +238,7 @@ def main():
             for file_path in problematic_files:
                 f.write(file_path + "\n")
 
-    # Prompt for deleting or saving original files
+    # Prompt for deleting original files
     delete_original_str = input("Do you want to delete the original HEIC and MOV/MP4 files? If not, they will be saved. (y/n, default is 'n'): ").strip().lower()
     delete_original = delete_original_str == 'y'
 
