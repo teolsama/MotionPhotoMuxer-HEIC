@@ -8,7 +8,7 @@ from os.path import exists, basename, isdir, join, splitext
 from PIL import Image
 
 problematic_files = []
-
+processed_files = []
 
 def validate_directory(dir):
     if not dir:
@@ -32,13 +32,14 @@ def validate_file(file_path):
     return True
 
 def convert_heic_to_jpeg(heic_path):
+    """Converts a HEIC file to a JPEG file while copying the EXIF data."""
     logging.info("Converting HEIC file to JPEG: {}".format(heic_path))
     try:
         im = Image.open(heic_path)
         jpeg_path = splitext(heic_path)[0] + ".jpg"
         im.convert("RGB").save(jpeg_path, "JPEG")
         logging.info("HEIC file converted to JPEG: {}".format(jpeg_path))
-        
+
         # Copy EXIF data from HEIC to JPEG
         exif_dict = piexif.load(heic_path)
         if exif_dict:
@@ -47,10 +48,11 @@ def convert_heic_to_jpeg(heic_path):
             logging.info("EXIF data copied from HEIC to JPEG.")
         else:
             logging.warning("No EXIF data found in HEIC file.")
-        
+
+        processed_files.append(heic_path)
         return jpeg_path
     except Exception as e:
-        logging.warning("Error converting HEIC file: {}".format(heic_path))
+        logging.warning("Error converting HEIC file: {}: {}".format(heic_path, str(e)))
         problematic_files.append(heic_path)
         return None
 
@@ -71,7 +73,7 @@ def validate_media(photo_path, video_path):
     return True
 
 def merge_files(photo_path, video_path, output_path):
-    """Merges the photo and video file together."""
+    """Merges the photo and video files together."""
     logging.info("Merging {} and {}.".format(photo_path, video_path))
     out_path = os.path.join(output_path, "{}".format(basename(photo_path)))
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -79,6 +81,7 @@ def merge_files(photo_path, video_path, output_path):
         outfile.write(photo.read())
         outfile.write(video.read())
     logging.info("Merged photo and video.")
+    processed_files.extend([photo_path, video_path])
     return out_path
 
 def add_xmp_metadata(merged_file, offset):
@@ -91,7 +94,7 @@ def add_xmp_metadata(merged_file, offset):
     try:
         pyexiv2.xmp.register_namespace('http://ns.google.com/photos/1.0/camera/', 'GCamera')
     except KeyError:
-        logging.warning("exiv2 detected that the GCamera namespace already exists.".format(merged_file))
+        logging.warning("exiv2 detected that the GCamera namespace already exists.")
     metadata['Xmp.GCamera.MicroVideo'] = pyexiv2.XmpTag('Xmp.GCamera.MicroVideo', 1)
     metadata['Xmp.GCamera.MicroVideoVersion'] = pyexiv2.XmpTag('Xmp.GCamera.MicroVideoVersion', 1)
     metadata['Xmp.GCamera.MicroVideoOffset'] = pyexiv2.XmpTag('Xmp.GCamera.MicroVideoOffset', offset)
@@ -104,7 +107,7 @@ def convert(photo_path, video_path, output_path):
     """Performs the conversion process."""
     if not validate_media(photo_path, video_path):
         logging.error("Invalid photo or video path.")
-        sys.exit(1)
+        return
     merged = merge_files(photo_path, video_path, output_path)
     photo_filesize = os.path.getsize(photo_path)
     merged_filesize = os.path.getsize(merged)
@@ -118,6 +121,16 @@ def matching_video(photo_path, video_dir):
             if file.startswith(base) and file.lower().endswith(('.mov', '.mp4')):
                 return os.path.join(root, file)
     return ""
+
+def unique_path(destination, filename):
+    """Generate a unique file path to avoid overwriting existing files."""
+    base, extension = os.path.splitext(filename)
+    counter = 1
+    new_filename = filename
+    while os.path.exists(os.path.join(destination, new_filename)):
+        new_filename = f"{base}({counter}){extension}"
+        counter += 1
+    return os.path.join(destination, new_filename)
 
 def process_directory(input_dir, output_dir, move_other_images, convert_all_heic):
     logging.info("Processing files in: {}".format(input_dir))
@@ -158,21 +171,25 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
         for root, dirs, files in os.walk(input_dir):
             for file in files:
                 file_path = os.path.join(root, file)
-                if file.lower().endswith(('.heic', '.jpg', '.jpeg')):
+                if file.lower().endswith(('.heic', '.jpg', '.jpeg', '.mov', '.mp4')):
                     if not matching_video(file_path, input_dir):
-                        shutil.move(file_path, other_files_dir)
-                        logging.info("Moved {} to output directory.".format(file))
-                elif file.lower().endswith(('.mov', '.mp4')):
-                    photo_path = os.path.splitext(file_path)[0] + ".jpg"
-                    if not os.path.exists(photo_path):
-                        photo_path = os.path.splitext(file_path)[0] + ".jpeg"
-                    if not os.path.exists(photo_path):
-                        photo_path = os.path.splitext(file_path)[0] + ".HEIC"
-                    if not os.path.exists(photo_path):
-                        shutil.move(file_path, other_files_dir)
-                        logging.info("Moved {} to output directory.".format(file))
+                        unique_file_path = unique_path(other_files_dir, basename(file_path))
+                        shutil.move(file_path, unique_file_path)
+                        logging.info("Moved {} to output directory.".format(basename(unique_file_path)))
 
     logging.info("Cleanup complete.")
+
+def delete_original_files():
+    """Deletes only successfully processed original HEIC and MOV/MP4 files."""
+    logging.info("Deleting original HEIC and MOV/MP4 files.")
+    for file_path in processed_files:
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                logging.info("Deleted original file: {}".format(file_path))
+            except Exception as e:
+                logging.warning(f"Failed to delete file {file_path}: {str(e)}")
+    logging.info("Deletion complete.")
 
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
@@ -216,20 +233,9 @@ def main():
     delete_original = delete_original_str == 'y'
 
     if delete_original:
-        delete_original_files(input_dir)
+        delete_original_files()
     else:
         logging.info("Original HEIC and MOV/MP4 files will be saved.")
-
-def delete_original_files(input_dir):
-    """Deletes original HEIC and MOV/MP4 files."""
-    logging.info("Deleting original HEIC and MOV/MP4 files.")
-    for root, dirs, files in os.walk(input_dir):
-        for file in files:
-            file_path = os.path.join(root, file)
-            if file.lower().endswith(('.heic', '.mov', '.mp4')):
-                os.remove(file_path)
-                logging.info("Deleted original file: {}".format(file_path))
-    logging.info("Deletion complete.")
 
 if __name__ == '__main__':
     main()
