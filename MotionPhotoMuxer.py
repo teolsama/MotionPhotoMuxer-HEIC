@@ -115,12 +115,13 @@ def convert(photo_path, video_path, output_path):
     add_xmp_metadata(merged, offset)
 
 def matching_video(photo_path, video_dir):
+    """Finds a matching MOV/MP4 video file for a given photo."""
     base = os.path.splitext(basename(photo_path))[0]
     for root, dirs, files in os.walk(video_dir):
         for file in files:
             if file.startswith(base) and file.lower().endswith(('.mov', '.mp4')):
                 return os.path.join(root, file)
-    return ""
+    return None
 
 def unique_path(destination, filename):
     """Generate a unique file path to avoid overwriting existing files."""
@@ -134,11 +135,11 @@ def unique_path(destination, filename):
 
 def process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted):
     logging.info("Processing files in: {}".format(input_dir))
-    
+
     if not validate_directory(input_dir):
         logging.error("Invalid input directory.")
         sys.exit(1)
-    
+
     if not validate_directory(output_dir):
         logging.error("Invalid output directory.")
         sys.exit(1)
@@ -178,7 +179,7 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
             for file in files:
                 file_path = os.path.join(root, file)
                 if file.lower().endswith(('.heic', '.jpg', '.jpeg', '.mov', '.mp4', '.png', '.gif')):
-                    if not matching_video(file_path, input_dir):
+                    if file_path not in processed_files:
                         unique_file_path = unique_path(other_files_dir, basename(file_path))
                         shutil.move(file_path, unique_file_path)
                         logging.info("Moved {} to output directory.".format(basename(unique_file_path)))
