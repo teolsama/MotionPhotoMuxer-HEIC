@@ -134,10 +134,8 @@ def unique_path(destination, filename):
         counter += 1
     return os.path.join(destination, new_filename)
 
-paired_files = []  # Track files with matching video pairs
+paired_files = []  # New list to track files with matching video pairs
 converted_files = []  # Track HEIC files that were converted but don't have a matching video
-unprocessed_files = []  # Track files that were skipped, had problems, or didn't need conversion
-problematic_files = []  # Track files that encountered errors during processing
 
 def process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted):
     logging.info("Processing files in: {}".format(input_dir))
@@ -155,50 +153,43 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             file_path = os.path.join(root, file)
-            try:
-                if file.lower().endswith('.heic'):
-                    # Convert HEIC if we are converting all or if there's a matching video
-                    jpeg_path = None
-                    if convert_all_heic or matching_video(file_path, input_dir):
-                        jpeg_path = convert_heic_to_jpeg(file_path)
-                    
-                    if jpeg_path:
-                        video_path = matching_video(jpeg_path, input_dir)
-                        if video_path:
-                            # Only merge and delete if a matching video exists
-                            convert(jpeg_path, video_path, output_dir)
-                            matching_pairs += 1
-                            # Track paired files only
-                            paired_files.extend([file_path, jpeg_path, video_path])
-                        else:
-                            # Track unpaired HEIC and its converted JPEG
-                            unprocessed_files.extend([file_path, jpeg_path])
-                    if delete_converted and not matching_video(file_path, input_dir):
-                        try:
-                            os.remove(file_path)
-                            logging.info(f"Deleted converted HEIC file without video: {file_path}")
-                        except Exception as e:
-                            logging.warning(f"Failed to delete file {file_path}: {str(e)}")
-                elif file.lower().endswith(('.jpg', '.jpeg', '.mp4', '.mov')):
-                    video_path = matching_video(file_path, input_dir)
+            if file.lower().endswith('.heic'):
+                # Convert HEIC if we are converting all or if there's a matching video
+                jpeg_path = None
+                if convert_all_heic or matching_video(file_path, input_dir):
+                    jpeg_path = convert_heic_to_jpeg(file_path)
+                
+                if jpeg_path:
+                    video_path = matching_video(jpeg_path, input_dir)
                     if video_path:
-                        # Only merge and delete JPEG if a matching video exists
-                        convert(file_path, video_path, output_dir)
+                        # Only merge and delete if a matching video exists
+                        convert(jpeg_path, video_path, output_dir)
                         matching_pairs += 1
-                        paired_files.extend([file_path, video_path])
-                        if delete_converted:
-                            delete_files([file_path, video_path])
+                        # Track paired files only
+                        paired_files.extend([file_path, jpeg_path, video_path])
                     else:
-                        # Track unprocessed files like single videos or JPEGs without conversion
-                        unprocessed_files.append(file_path)
-                else:
-                    # Track unprocessed files (e.g., files that aren't HEIC, JPEG, MP4)
-                    unprocessed_files.append(file_path)
+                        # Track converted HEIC files that do not have a video
+                        converted_files.append(file_path)
+                        # **Move HEIC to other_files if no matching video exists and user opted to move them**
+                        if move_other_images:
+                            move_to_other_files(file_path, output_dir)
 
-            except Exception as e:
-                logging.error(f"Error processing file {file_path}: {str(e)}")
-                problematic_files.append(file_path)  # Track files with errors
-                unprocessed_files.append(file_path)  # Ensure they are moved
+                if delete_converted and not matching_video(file_path, input_dir):
+                    try:
+                        os.remove(file_path)
+                        logging.info(f"Deleted converted HEIC file without video: {file_path}")
+                    except Exception as e:
+                        logging.warning(f"Failed to delete file {file_path}: {str(e)}")
+
+            elif file.lower().endswith(('.jpg', '.jpeg')):
+                video_path = matching_video(file_path, input_dir)
+                if video_path:
+                    # Only merge and delete JPEG if a matching video exists
+                    convert(file_path, video_path, output_dir)
+                    matching_pairs += 1
+                    paired_files.extend([file_path, video_path])
+                    if delete_converted:
+                        delete_files([file_path, video_path])
 
     logging.info("Conversion complete.")
     logging.info("Found {} matching HEIC/JPEG and MOV/MP4 pairs.".format(matching_pairs))
@@ -207,12 +198,24 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
     if move_other_images:
         other_files_dir = os.path.join(output_dir, "other_files")
         os.makedirs(other_files_dir, exist_ok=True)
-        for file_path in unprocessed_files:
-            unique_file_path = unique_path(other_files_dir, basename(file_path))
-            shutil.move(file_path, unique_file_path)
-            logging.info(f"Moved {file_path} to {unique_file_path}")
+        for root, dirs, files in os.walk(input_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                if file_path not in processed_files and file_path not in paired_files:
+                    unique_file_path = unique_path(other_files_dir, basename(file_path))
+                    shutil.move(file_path, unique_file_path)
+                    logging.info(f"Moved {file_path} to {unique_file_path}")
 
     logging.info("Cleanup complete.")
+    
+def move_to_other_files(file_path, output_dir):
+    """Move HEIC file to 'other_files' folder in the output directory."""
+    other_files_dir = os.path.join(output_dir, "other_files")
+    os.makedirs(other_files_dir, exist_ok=True)
+    unique_file_path = unique_path(other_files_dir, basename(file_path))
+    shutil.move(file_path, unique_file_path)
+    logging.info(f"Moved {file_path} to {unique_file_path}")
+
 
 def delete_files(files):
     """Deletes a list of files."""
