@@ -1,3 +1,4 @@
+import toml
 import logging
 import os
 import shutil
@@ -227,31 +228,32 @@ def delete_files(files):
             except Exception as e:
                 logging.warning(f"파일 삭제 실패 {file}: {str(e)}")
 
+def load_config():
+    """TOML 설정 파일에서 설정을 로드합니다."""
+    config_path = 'config.toml'
+    if not exists(config_path):
+        logging.error(f"설정 파일을 찾을 수 없습니다: {config_path}")
+        sys.exit(1)
+    
+    with open(config_path, 'r') as f:
+        return toml.load(f)
+
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     logging.info("Apple Live Photos를 Google Motion Photos로 변환하는 프로그램에 오신 것을 환영합니다.")
 
-    # 디렉토리 입력 요청
-    input_dir = input("HEIC/JPEG/MOV/MP4 파일이 있는 폴더 또는 하위 폴더의 경로를 입력하세요: ").strip()
+    # TOML 설정 파일에서 설정 로드
+    config = load_config()
+
+    input_dir = config['directories']['input']
+    output_dir = config['directories']['output']
+    move_other_images = config['options']['move_other_images']
+    convert_all_heic = config['options']['convert_all_heic']
+    delete_converted = config['options']['delete_converted']
 
     if not validate_directory(input_dir):
         logging.error("유효하지 않은 디렉토리 경로입니다.")
         sys.exit(1)
-
-    # 출력 디렉토리 입력 요청
-    output_dir = input("출력 디렉토리 경로를 입력하세요 (기본값은 'output'): ").strip() or "output"
-
-    # 다른 이미지 이동 여부 확인
-    move_other_images_str = input("매칭되지 않는 파일을 출력 디렉토리의 'other_files' 폴더로 이동하시겠습니까? (y/n, 기본값은 'n'): ").strip().lower()
-    move_other_images = move_other_images_str == 'y'
-
-    # 모든 HEIC 파일 변환 여부 확인
-    convert_all_heic_str = input("매칭되는 MOV/MP4 파일이 없어도 모든 HEIC 파일을 JPEG로 변환하시겠습니까? (y/n, 기본값은 'n'): ").strip().lower()
-    convert_all_heic = convert_all_heic_str == 'y'
-
-    # 변환된 파일 삭제 여부 확인
-    delete_converted_str = input("매칭되는 MOV/MP4 파일이 있든 없든 변환된 HEIC 파일을 삭제하시겠습니까? (y/n, 기본값은 'n'): ").strip().lower()
-    delete_converted = delete_converted_str == 'y'
 
     # 변환 수행
     process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted)
@@ -269,8 +271,7 @@ def main():
                 f.write(file_path + "\n")
 
     # 원본 파일 삭제 여부 확인
-    delete_original_str = input("원본 HEIC 및 MOV/MP4 파일을 삭제하시겠습니까? 삭제하지 않으면 저장됩니다. (y/n, 기본값은 'n'): ").strip().lower()
-    delete_original = delete_original_str == 'y'
+    delete_original = config['options']['delete_original']
 
     if delete_original:
         delete_files(paired_files)  # 매칭된 파일만 삭제

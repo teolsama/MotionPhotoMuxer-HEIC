@@ -1,0 +1,10 @@
+[directories]
+input = "/path/to/input/directory"
+output = "/path/to/output/directory"
+
+[options]
+move_other_images = false
+convert_all_heic = false
+delete_converted = false
+delete_original = false
+
