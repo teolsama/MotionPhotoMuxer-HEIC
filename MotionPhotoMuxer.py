@@ -138,23 +138,23 @@ paired_files = []  # New list to track files with matching video pairs
 converted_files = []  # Track HEIC files that were converted but don't have a matching video
 
 def process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted):
-    logging.info("Processing files in: {}".format(input_dir))
+    logging.info("다음 디렉토리에서 파일 처리 중: {}".format(input_dir))
 
     if not validate_directory(input_dir):
-        logging.error("Invalid input directory.")
+        logging.error("유효하지 않은 입력 디렉토리입니다.")
         sys.exit(1)
 
-    # Ensure the output directory exists
+    # 출력 디렉토리가 존재하는지 확인
     if not exists(output_dir):
         os.makedirs(output_dir)
-        logging.info(f"Created output directory: {output_dir}")
+        logging.info(f"출력 디렉토리 생성됨: {output_dir}")
 
     matching_pairs = 0
     for root, dirs, files in os.walk(input_dir):
         for file in files:
             file_path = os.path.join(root, file)
             if file.lower().endswith('.heic'):
-                # Convert HEIC if we are converting all or if there's a matching video
+                # 모든 HEIC를 변환하거나 매칭되는 비디오가 있는 경우에만 HEIC 변환
                 jpeg_path = None
                 if convert_all_heic or matching_video(file_path, input_dir):
                     jpeg_path = convert_heic_to_jpeg(file_path)
@@ -162,39 +162,39 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
                 if jpeg_path:
                     video_path = matching_video(jpeg_path, input_dir)
                     if video_path:
-                        # Only merge and delete if a matching video exists
+                        # 매칭되는 비디오가 있는 경우에만 병합 및 삭제
                         convert(jpeg_path, video_path, output_dir)
                         matching_pairs += 1
-                        # Track paired files only
+                        # 매칭된 파일만 추적
                         paired_files.extend([file_path, jpeg_path, video_path])
                     else:
-                        # Track converted HEIC files that do not have a video
+                        # 비디오가 없는 변환된 HEIC 파일 추적
                         converted_files.append(file_path)
-                        # **Move HEIC to other_files if no matching video exists and user opted to move them**
+                        # 매칭되는 비디오가 없고 사용자가 이동을 선택한 경우 HEIC를 other_files로 이동
                         if move_other_images:
                             move_to_other_files(file_path, output_dir)
 
                 if delete_converted and not matching_video(file_path, input_dir):
                     try:
                         os.remove(file_path)
-                        logging.info(f"Deleted converted HEIC file without video: {file_path}")
+                        logging.info(f"비디오가 없는 변환된 HEIC 파일 삭제됨: {file_path}")
                     except Exception as e:
-                        logging.warning(f"Failed to delete file {file_path}: {str(e)}")
+                        logging.warning(f"파일 삭제 실패 {file_path}: {str(e)}")
 
             elif file.lower().endswith(('.jpg', '.jpeg')):
                 video_path = matching_video(file_path, input_dir)
                 if video_path:
-                    # Only merge and delete JPEG if a matching video exists
+                    # 매칭되는 비디오가 있는 경우에만 JPEG 병합 및 삭제
                     convert(file_path, video_path, output_dir)
                     matching_pairs += 1
                     paired_files.extend([file_path, video_path])
                     if delete_converted:
                         delete_files([file_path, video_path])
 
-    logging.info("Conversion complete.")
-    logging.info("Found {} matching HEIC/JPEG and MOV/MP4 pairs.".format(matching_pairs))
+    logging.info("변환 완료.")
+    logging.info("HEIC/JPEG와 MOV/MP4 매칭 쌍 {} 개 발견.".format(matching_pairs))
 
-    # Move non-matching files to 'other_files' folder
+    # 매칭되지 않는 파일을 'other_files' 폴더로 이동
     if move_other_images:
         other_files_dir = os.path.join(output_dir, "other_files")
         os.makedirs(other_files_dir, exist_ok=True)
@@ -204,78 +204,78 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
                 if file_path not in processed_files and file_path not in paired_files:
                     unique_file_path = unique_path(other_files_dir, basename(file_path))
                     shutil.move(file_path, unique_file_path)
-                    logging.info(f"Moved {file_path} to {unique_file_path}")
+                    logging.info(f"{file_path}를 {unique_file_path}로 이동함")
 
-    logging.info("Cleanup complete.")
+    logging.info("정리 완료.")
     
 def move_to_other_files(file_path, output_dir):
-    """Move HEIC file to 'other_files' folder in the output directory."""
+    """HEIC 파일을 출력 디렉토리의 'other_files' 폴더로 이동."""
     other_files_dir = os.path.join(output_dir, "other_files")
     os.makedirs(other_files_dir, exist_ok=True)
     unique_file_path = unique_path(other_files_dir, basename(file_path))
     shutil.move(file_path, unique_file_path)
-    logging.info(f"Moved {file_path} to {unique_file_path}")
+    logging.info(f"{file_path}를 {unique_file_path}로 이동함")
 
 
 def delete_files(files):
-    """Deletes a list of files."""
+    """파일 목록을 삭제."""
     for file in files:
         if exists(file):
             try:
                 os.remove(file)
-                logging.info(f"Deleted file: {file}")
+                logging.info(f"파일 삭제됨: {file}")
             except Exception as e:
-                logging.warning(f"Failed to delete file {file}: {str(e)}")
+                logging.warning(f"파일 삭제 실패 {file}: {str(e)}")
 
 def main():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
-    logging.info("Welcome to the Apple Live Photos to Google Motion Photos converter.")
+    logging.info("Apple Live Photos를 Google Motion Photos로 변환하는 프로그램에 오신 것을 환영합니다.")
 
-    # Prompt for directories
-    input_dir = input("Enter the directory path containing HEIC/JPEG/MOV/MP4 files in the same folder or subfolders: ").strip()
+    # 디렉토리 입력 요청
+    input_dir = input("HEIC/JPEG/MOV/MP4 파일이 있는 폴더 또는 하위 폴더의 경로를 입력하세요: ").strip()
 
     if not validate_directory(input_dir):
-        logging.error("Invalid directory path.")
+        logging.error("유효하지 않은 디렉토리 경로입니다.")
         sys.exit(1)
 
-    # Prompt for output directory
-    output_dir = input("Enter the output directory path (default is 'output'): ").strip() or "output"
+    # 출력 디렉토리 입력 요청
+    output_dir = input("출력 디렉토리 경로를 입력하세요 (기본값은 'output'): ").strip() or "output"
 
-    # Prompt for moving other images
-    move_other_images_str = input("Do you want to move non-matching files to the 'other_files' folder in the output directory? (y/n, default is 'n'): ").strip().lower()
+    # 다른 이미지 이동 여부 확인
+    move_other_images_str = input("매칭되지 않는 파일을 출력 디렉토리의 'other_files' 폴더로 이동하시겠습니까? (y/n, 기본값은 'n'): ").strip().lower()
     move_other_images = move_other_images_str == 'y'
 
-    # Prompt for converting all HEIC files to JPEG
-    convert_all_heic_str = input("Do you want to convert all HEIC files to JPEG, regardless of whether they have a matching MOV/MP4 file? (y/n, default is 'n'): ").strip().lower()
+    # 모든 HEIC 파일 변환 여부 확인
+    convert_all_heic_str = input("매칭되는 MOV/MP4 파일이 없어도 모든 HEIC 파일을 JPEG로 변환하시겠습니까? (y/n, 기본값은 'n'): ").strip().lower()
     convert_all_heic = convert_all_heic_str == 'y'
 
-    # Prompt for deleting converted files
-    delete_converted_str = input("Do you want to delete converted HEIC files whether they have a matching MOV/MP4 file or not? (y/n, default is 'n'): ").strip().lower()
+    # 변환된 파일 삭제 여부 확인
+    delete_converted_str = input("매칭되는 MOV/MP4 파일이 있든 없든 변환된 HEIC 파일을 삭제하시겠습니까? (y/n, 기본값은 'n'): ").strip().lower()
     delete_converted = delete_converted_str == 'y'
 
-    # Perform the conversion
+    # 변환 수행
     process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted)
 
-    # Output summary of problematic files
+    # 문제가 있는 파일 요약 출력
     if problematic_files:
-        logging.warning("The following files encountered errors during conversion:")
+        logging.warning("다음 파일들은 변환 중 오류가 발생했습니다:")
         for file_path in problematic_files:
             logging.warning(file_path)
 
-        # Write summary to a file
+        # 요약을 파일로 작성
         with open("problematic_files.txt", "w") as f:
-            f.write("The following files encountered errors during conversion:\n")
+            f.write("다음 파일들은 변환 중 오류가 발생했습니다:\n")
             for file_path in problematic_files:
                 f.write(file_path + "\n")
 
-    # Prompt for deleting original files
-    delete_original_str = input("Do you want to delete the original HEIC and MOV/MP4 files? If not, they will be saved. (y/n, default is 'n'): ").strip().lower()
+    # 원본 파일 삭제 여부 확인
+    delete_original_str = input("원본 HEIC 및 MOV/MP4 파일을 삭제하시겠습니까? 삭제하지 않으면 저장됩니다. (y/n, 기본값은 'n'): ").strip().lower()
     delete_original = delete_original_str == 'y'
 
     if delete_original:
-        delete_files(paired_files)  # Only delete paired files
+        delete_files(paired_files)  # 매칭된 파일만 삭제
     else:
-        logging.info("Original HEIC and MOV/MP4 files will be saved.")
+        logging.info("원본 HEIC 및 MOV/MP4 파일이 저장됩니다.")
 
 
 if __name__ == '__main__':
