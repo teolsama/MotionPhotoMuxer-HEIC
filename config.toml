@@ -3,8 +3,12 @@ input = "/path/to/input/directory"
 output = "/path/to/output/directory"
 
 [options]
+# 매칭되지 않는 파일을 출력 디렉토리의 'other_files' 폴더로 이동하시겠습니까
 move_other_images = false
+# 매칭되는 MOV/MP4 파일이 없어도 모든 HEIC 파일을 JPEG로 변환하시겠습니까?
 convert_all_heic = false
+# 매칭되는 MOV/MP4 파일이 있든 없든 변환된 HEIC 파일을 삭제하시겠습니까?
 delete_converted = false
+# 원본 HEIC 및 MOV/MP4 파일을 삭제하시겠습니까?
 delete_original = false
 
