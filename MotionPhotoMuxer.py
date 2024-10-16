@@ -5,7 +5,7 @@ import shutil
 import sys
 import pyexiv2
 import piexif
-from os.path import exists, basename, isdir, join, splitext
+from os.path import exists, basename, isdir, join, splitext, relpath
 from PIL import Image
 
 problematic_files = []
@@ -73,15 +73,26 @@ def validate_media(photo_path, video_path):
         return False
     return True
 
-def merge_files(photo_path, video_path, output_path):
-    """Merges the photo and video files together."""
-    logging.info("Merging {} and {}.".format(photo_path, video_path))
-    out_path = os.path.join(output_path, "{}".format(basename(photo_path)))
+def merge_files(photo_path, video_path, output_path, input_dir):
+    """사진과 비디오 파일을 병합하고 원본 폴더 구조를 유지합니다."""
+    logging.info("{}와 {} 병합 중.".format(photo_path, video_path))
+    
+    # 원본 파일의 상대 경로를 계산합니다
+    rel_path = relpath(photo_path, input_dir)
+    
+    # 새로운 파일 경로를 생성합니다
+    out_path = os.path.join(output_path, "convert", rel_path)
+    
+    # 새 파일이 위치할 디렉토리를 생성합니다
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    
+    # 파일 이름 충돌을 방지하기 위해 고유한 파일 경로를 생성합니다
+    out_path = unique_path(os.path.dirname(out_path), basename(out_path))
+    
     with open(out_path, "wb") as outfile, open(photo_path, "rb") as photo, open(video_path, "rb") as video:
         outfile.write(photo.read())
         outfile.write(video.read())
-    logging.info("Merged photo and video.")
+    logging.info("사진과 비디오 병합됨.")
     processed_files.extend([photo_path, video_path])
     return out_path
 
@@ -104,12 +115,12 @@ def add_xmp_metadata(merged_file, offset):
         1500000)  # in Apple Live Photos, the chosen photo is 1.5s after the start of the video
     metadata.write()
 
-def convert(photo_path, video_path, output_path):
-    """Performs the conversion process."""
+def convert(photo_path, video_path, output_path, input_dir):
+    """변환 프로세스를 수행합니다."""
     if not validate_media(photo_path, video_path):
-        logging.error("Invalid photo or video path.")
+        logging.error("유효하지 않은 사진 또는 비디오 경로입니다.")
         return
-    merged = merge_files(photo_path, video_path, output_path)
+    merged = merge_files(photo_path, video_path, output_path, input_dir)
     photo_filesize = os.path.getsize(photo_path)
     merged_filesize = os.path.getsize(merged)
     offset = merged_filesize - photo_filesize
@@ -138,6 +149,26 @@ def unique_path(destination, filename):
 paired_files = []  # New list to track files with matching video pairs
 converted_files = []  # Track HEIC files that were converted but don't have a matching video
 
+def move_to_other_files(file_path, input_dir, output_dir):
+    """HEIC 파일을 출력 디렉토리의 'other_files' 폴더로 이동하며 원래 폴더 구조를 유지합니다."""
+    other_files_dir = os.path.join(output_dir, "other_files")
+    
+    # 원본 파일의 상대 경로를 계산합니다
+    rel_path = relpath(file_path, input_dir)
+    
+    # 새로운 파일 경로를 생성합니다
+    new_file_path = os.path.join(other_files_dir, rel_path)
+    
+    # 새 파일이 위치할 디렉토리를 생성합니다
+    os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
+    
+    # 파일 이름 충돌을 방지하기 위해 고유한 파일 경로를 생성합니다
+    unique_file_path = unique_path(os.path.dirname(new_file_path), basename(new_file_path))
+    
+    # 파일을 이동합니다
+    shutil.move(file_path, unique_file_path)
+    logging.info(f"{file_path}를 {unique_file_path}로 이동함")
+
 def process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted):
     logging.info("다음 디렉토리에서 파일 처리 중: {}".format(input_dir))
 
@@ -164,7 +195,7 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
                     video_path = matching_video(jpeg_path, input_dir)
                     if video_path:
                         # 매칭되는 비디오가 있는 경우에만 병합 및 삭제
-                        convert(jpeg_path, video_path, output_dir)
+                        convert(jpeg_path, video_path, output_dir, input_dir)
                         matching_pairs += 1
                         # 매칭된 파일만 추적
                         paired_files.extend([file_path, jpeg_path, video_path])
@@ -173,7 +204,7 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
                         converted_files.append(file_path)
                         # 매칭되는 비디오가 없고 사용자가 이동을 선택한 경우 HEIC를 other_files로 이동
                         if move_other_images:
-                            move_to_other_files(file_path, output_dir)
+                            move_to_other_files(file_path, input_dir, output_dir)
 
                 if delete_converted and not matching_video(file_path, input_dir):
                     try:
@@ -186,7 +217,7 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
                 video_path = matching_video(file_path, input_dir)
                 if video_path:
                     # 매칭되는 비디오가 있는 경우에만 JPEG 병합 및 삭제
-                    convert(file_path, video_path, output_dir)
+                    convert(file_path, video_path, output_dir, input_dir)
                     matching_pairs += 1
                     paired_files.extend([file_path, video_path])
                     if delete_converted:
@@ -197,27 +228,14 @@ def process_directory(input_dir, output_dir, move_other_images, convert_all_heic
 
     # 매칭되지 않는 파일을 'other_files' 폴더로 이동
     if move_other_images:
-        other_files_dir = os.path.join(output_dir, "other_files")
-        os.makedirs(other_files_dir, exist_ok=True)
         for root, dirs, files in os.walk(input_dir):
             for file in files:
                 file_path = os.path.join(root, file)
                 if file_path not in processed_files and file_path not in paired_files:
-                    unique_file_path = unique_path(other_files_dir, basename(file_path))
-                    shutil.move(file_path, unique_file_path)
-                    logging.info(f"{file_path}를 {unique_file_path}로 이동함")
+                    move_to_other_files(file_path, input_dir, output_dir)
 
     logging.info("정리 완료.")
     
-def move_to_other_files(file_path, output_dir):
-    """HEIC 파일을 출력 디렉토리의 'other_files' 폴더로 이동."""
-    other_files_dir = os.path.join(output_dir, "other_files")
-    os.makedirs(other_files_dir, exist_ok=True)
-    unique_file_path = unique_path(other_files_dir, basename(file_path))
-    shutil.move(file_path, unique_file_path)
-    logging.info(f"{file_path}를 {unique_file_path}로 이동함")
-
-
 def delete_files(files):
     """파일 목록을 삭제."""
     for file in files:
