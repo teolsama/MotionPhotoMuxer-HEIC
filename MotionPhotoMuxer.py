@@ -150,8 +150,8 @@ paired_files = []  # New list to track files with matching video pairs
 converted_files = []  # Track HEIC files that were converted but don't have a matching video
 
 def move_to_other_files(file_path, input_dir, output_dir):
-    """HEIC 파일을 출력 디렉토리의 'other_files' 폴더로 이동하며 원래 폴더 구조를 유지합니다."""
-    other_files_dir = os.path.join(output_dir, "other_files")
+    """HEIC 파일을 출력 디렉토리의 'original' 폴더로 이동하며 원래 폴더 구조를 유지합니다."""
+    other_files_dir = os.path.join(output_dir, "original")
     
     # 원본 파일의 상대 경로를 계산합니다
     rel_path = relpath(file_path, input_dir)
