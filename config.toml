@@ -1,6 +1,6 @@
 [directories]
-input = "/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud"
-output = "/home/teol/github/MotionPhotoMuxer-HEIC/test/google"
+input = "/home/teol/github/MotionPhotoMuxer-HEIC/download/icloud"
+output = "/home/teol/github/MotionPhotoMuxer-HEIC/download/google"
 [options]
 # 매칭되지 않는 파일을 출력 디렉토리의 'other_files' 폴더로 이동하시겠습니까
 move_other_images = true

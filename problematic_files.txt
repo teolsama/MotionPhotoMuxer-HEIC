@@ -1,0 +1,16 @@
+다음 파일들은 변환 중 오류가 발생했습니다:
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/21/IMG_0088.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/21/IMG_0093.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/21/IMG_0084.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/21/IMG_0062.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/21/IMG_0222.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/13/IMG_0041.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/30/IMG_0454.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0033.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0034.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0037.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0036.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0038.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0032.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0035.HEIC
+/home/teol/github/MotionPhotoMuxer-HEIC/test/icloud/2020/06/05/IMG_0031.HEIC
