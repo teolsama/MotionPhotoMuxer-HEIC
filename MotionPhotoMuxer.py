@@ -269,9 +269,15 @@ def main():
     convert_all_heic = config['options']['convert_all_heic']
     delete_converted = config['options']['delete_converted']
 
+    # 첫 실행에서는 입력 디렉토리가 존재하지 않으면 생성
     if not validate_directory(input_dir):
-        logging.error("유효하지 않은 디렉토리 경로입니다.")
-        sys.exit(1)
+        if not os.path.exists(input_dir):
+            try:
+                os.makedirs(input_dir)
+                logging.info(f"디렉토리가 생성되었습니다: {input_dir}")
+            except OSError as e:
+                logging.error(f"디렉토리 생성 중 오류 발생: {e}")
+                sys.exit(1)
 
     # 변환 수행
     process_directory(input_dir, output_dir, move_other_images, convert_all_heic, delete_converted)
